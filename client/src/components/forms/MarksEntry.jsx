@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateFormData } from '../../store/slices/applicationSlice';
 import { Plus, Trash2 } from 'lucide-react';
@@ -9,15 +10,14 @@ export default function MarksEntry() {
   const form = useSelector((s) => s.application.formData);
   const marks = form.marks || [];
 
-  const initDefault = () => {
+  // Initialize default marks on component mount
+  useEffect(() => {
     if (marks.length === 0) {
       dispatch(updateFormData({
         marks: DEFAULT_SUBJECTS.map((s) => ({ subject_name: s, marks_obtained: '', max_marks: 100, exam_year: '' })),
       }));
     }
-  };
-
-  if (marks.length === 0) initDefault();
+  }, []);
 
   const updateMark = (i, key, val) => {
     const updated = marks.map((m, idx) => idx === i ? { ...m, [key]: val } : m);
