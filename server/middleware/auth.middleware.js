@@ -1,0 +1,29 @@
+const jwt = require('jsonwebtoken');
+const { error } = require('../utils/apiResponse');
+
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return error(res, 'Access token required', 401);
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return error(res, 'Invalid or expired token', 401);
+  }
+};
+
+const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (token) {
+    try {
+      req.user = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (_) {}
+  }
+  next();
+};
+
+module.exports = { verifyToken, optionalAuth };
