@@ -13,7 +13,7 @@ export default function CollegeChoice() {
 
   useEffect(() => {
     if (form.gender) {
-      dispatch(fetchAvailableColleges({ gender: form.gender, hostel: form.hostel_required ? 'true' : 'false' }));
+      dispatch(fetchAvailableColleges({ gender: form.gender, hostel: form.hostel_required ? 'true' : 'false', limit: 500 }));
     }
   }, [form.gender, form.hostel_required, dispatch]);
 
@@ -21,17 +21,12 @@ export default function CollegeChoice() {
 
   const addCollege = (college) => {
     if (prefs.find((p) => p.college_id === college.college_id)) return;
-    const newPrefs = [...prefs, { college_id: college.college_id, course_id: null, preference_order: prefs.length + 1, college }];
+    const newPrefs = [...prefs, { college_id: college.college_id, preference_order: prefs.length + 1, college }];
     dispatch(updateFormData({ college_preferences: newPrefs }));
   };
 
   const removeCollege = (idx) => {
     const updated = prefs.filter((_, i) => i !== idx).map((p, i) => ({ ...p, preference_order: i + 1 }));
-    dispatch(updateFormData({ college_preferences: updated }));
-  };
-
-  const setCourse = (idx, courseId) => {
-    const updated = prefs.map((p, i) => i === idx ? { ...p, course_id: courseId ? parseInt(courseId) : null } : p);
     dispatch(updateFormData({ college_preferences: updated }));
   };
 
@@ -50,9 +45,10 @@ export default function CollegeChoice() {
   };
 
   const filtered = available.filter((c) =>
-    c.college_name?.toLowerCase().includes(search.toLowerCase()) ||
+    (c.college_name?.toLowerCase().includes(search.toLowerCase()) ||
     c.college_code?.toLowerCase().includes(search.toLowerCase()) ||
-    c.district?.district_name?.toLowerCase().includes(search.toLowerCase())
+    c.district?.district_name?.toLowerCase().includes(search.toLowerCase())) &&
+    c.college_type !== 'SELF_FINANCE'
   );
 
   return (
@@ -89,12 +85,6 @@ export default function CollegeChoice() {
                     <p className="font-medium text-sm text-gray-800 truncate">{college?.college_name}</p>
                     <p className="text-xs text-gray-500">{college?.district?.district_name} • {college?.gender_type} {college?.hostel_available ? '• Hostel' : ''}</p>
                   </div>
-                  {college?.courses && college.courses.length > 0 && (
-                    <select className="form-select text-xs w-40" value={pref.course_id || ''} onChange={(e) => setCourse(idx, e.target.value)}>
-                      <option value="">Any course</option>
-                      {college.courses.map((c) => <option key={c.course_id} value={c.course_id}>{c.course_name}</option>)}
-                    </select>
-                  )}
                   <div className="flex gap-1">
                     <button type="button" onClick={() => moveUp(idx)} className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30" disabled={idx === 0}>↑</button>
                     <button type="button" onClick={() => moveDown(idx)} className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30" disabled={idx === prefs.length - 1}>↓</button>

@@ -26,7 +26,7 @@ export default function AdminUsers() {
 
   useEffect(() => {
     loadUsers();
-    api.get('/admin/colleges').then((r) => setColleges(r.data.data || []));
+    api.get('/admin/colleges', { params: { limit: 1000, page: 1 } }).then((r) => setColleges(r.data.data || []));
   }, []);
 
   const openAdd = () => { setEditing(null); setForm(EMPTY); setShowModal(true); };

@@ -22,28 +22,17 @@ async function getDashboardStats(req, res) {
 
     // Gender breakdown
     const genderStats = await Student.findAll({
-      attributes: ['gender', [fn('COUNT', col('student_id')), 'count']],
+      attributes: ['gender', [fn('COUNT', col('Student.student_id')), 'count']],
       include: [{ model: Application, as: 'applications', where: yearFilter, required: true, attributes: [] }],
-      group: ['gender'],
-      raw: true,
-    });
-
-    // Community breakdown
-    const communityStats = await Application.findAll({
-      attributes: [[fn('COUNT', col('Application.application_id')), 'count']],
-      include: [
-        { model: Student, as: 'student', attributes: [], include: [{ model: Community, as: 'community', attributes: ['community_name'] }] },
-      ],
-      where: yearFilter,
-      group: ['student.community.community_id'],
+      group: ['Student.gender'],
       raw: true,
     });
 
     // Admission type breakdown
     const admissionStats = await Student.findAll({
-      attributes: ['admission_type', [fn('COUNT', col('student_id')), 'count']],
+      attributes: ['admission_type', [fn('COUNT', col('Student.student_id')), 'count']],
       include: [{ model: Application, as: 'applications', where: yearFilter, required: true, attributes: [] }],
-      group: ['admission_type'],
+      group: ['Student.admission_type'],
       raw: true,
     });
 
@@ -62,12 +51,13 @@ async function getDashboardStats(req, res) {
 // User management
 async function getUsers(req, res) {
   try {
-    const { page = 1, limit = 20, role, search } = req.query;
+    const { page = 1, limit = 200, role, search } = req.query;
     const where = {};
     if (role) where.role = role;
     if (search) where[Op.or] = [{ name: { [Op.like]: `%${search}%` } }, { email: { [Op.like]: `%${search}%` } }];
 
-    const { count, rows } = await User.findAndCountAll({
+    const count = await User.count({ where });
+    const rows = await User.findAll({
       where,
       attributes: { exclude: ['password', 'refresh_token'] },
       include: [{ association: 'college', attributes: ['college_id', 'college_name'] }],
@@ -226,7 +216,8 @@ async function getApplicationReport(req, res) {
     if (community_id) studentWhere.community_id = community_id;
     if (district_id) studentWhere.comm_district_id = district_id;
 
-    const { count, rows } = await Application.findAndCountAll({
+    const count = await Application.count({ where: appWhere, include: [{ model: Student, as: 'student', where: studentWhere, required: true }] });
+    const rows = await Application.findAll({
       where: appWhere,
       include: [
         { model: Student, as: 'student', where: studentWhere, include: STUDENT_MINI_INCLUDE },

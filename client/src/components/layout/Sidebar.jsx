@@ -5,7 +5,6 @@ import { LayoutDashboard, FileText, Building2, Users, BarChart3, Database, Gradu
 const studentLinks = [
   { to: '/student/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/student/apply', icon: FileText, label: 'Apply Now' },
-  { to: '/student/status', icon: ClipboardList, label: 'Application Status' },
 ];
 
 const adminLinks = [

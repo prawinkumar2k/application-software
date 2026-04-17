@@ -5,7 +5,7 @@ const { success, error, paginated } = require('../utils/apiResponse');
 // GET /api/v1/colleges/available?gender=MALE&hostel=true&district_id=1&search=
 async function getAvailableColleges(req, res) {
   try {
-    const { gender, hostel, district_id, search, page = 1, limit = 100 } = req.query;
+    const { gender, hostel, district_id, search, page = 1, limit = 500 } = req.query;
 
     const where = { is_active: 1 };
 
@@ -26,7 +26,8 @@ async function getAvailableColleges(req, res) {
     if (district_id) where.district_id = district_id;
     if (search) where.college_name = { [Op.like]: `%${search}%` };
 
-    const { count, rows } = await College.findAndCountAll({
+    const count = await College.count({ where });
+    const rows = await College.findAll({
       where,
       include: [
         { model: District, as: 'district', attributes: ['district_id', 'district_name'] },
@@ -95,13 +96,14 @@ async function deleteCollege(req, res) {
 
 async function getAllColleges(req, res) {
   try {
-    const { page = 1, limit = 20, search, district_id, gender_type } = req.query;
+    const { page = 1, limit = 500, search, district_id, gender_type } = req.query;
     const where = {};
     if (search) where.college_name = { [Op.like]: `%${search}%` };
     if (district_id) where.district_id = district_id;
     if (gender_type) where.gender_type = gender_type;
 
-    const { count, rows } = await College.findAndCountAll({
+    const count = await College.count({ where });
+    const rows = await College.findAll({
       where,
       include: [{ model: District, as: 'district', attributes: ['district_name'] }],
       order: [['college_name', 'ASC']],
