@@ -6,7 +6,7 @@ const upload = require('../middleware/upload.middleware');
 const appCtrl = require('../controllers/application.controller');
 const { getAvailableColleges } = require('../controllers/college.controller');
 const adminCtrl = require('../controllers/admin.controller');
-const { Community, Caste, AcademicYear } = require('../models');
+const { Community, Caste, AcademicYear, District } = require('../models');
 
 // Public endpoints (no auth required)
 router.get('/colleges/available', getAvailableColleges);
@@ -18,18 +18,23 @@ router.get('/communities', async (req, res) => {
       include: [{ model: Caste, as: 'castes' }],
       order: [['community_name', 'ASC']]
     });
+    console.log('Communities fetched:', communities.length);
+    if (communities.length > 0) {
+      console.log('Sample community:', JSON.stringify(communities[0], null, 2));
+    }
     return res.json({ success: true, data: communities });
   } catch (err) {
-    return res.status(500).json({ success: false, message: 'Failed to fetch communities' });
+    console.error('Error fetching communities:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch communities', error: err.message });
   }
 });
 
 router.get('/districts', async (req, res) => {
   try {
-    const { District } = require('../models');
     const districts = await District.findAll({ order: [['district_name', 'ASC']] });
     return res.json({ success: true, data: districts });
   } catch (err) {
+    console.error('Error fetching districts:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch districts' });
   }
 });
@@ -39,6 +44,7 @@ router.get('/academic-years', async (req, res) => {
     const years = await AcademicYear.findAll({ order: [['year_id', 'DESC']] });
     return res.json({ success: true, data: years });
   } catch (err) {
+    console.error('Error fetching academic years:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch academic years' });
   }
 });
