@@ -10,10 +10,7 @@ export default function PersonalDetails() {
   const [castes, setCastes] = useState([]);
 
   useEffect(() => {
-    api.get('/communities').then((r) => {
-      console.log('Communities data:', r.data.data);
-      setCommunities(r.data.data || []);
-    }).catch((err) => {
+    api.get('/communities').then((r) => setCommunities(r.data.data || [])).catch((err) => {
       console.error('Failed to fetch communities:', err);
     });
   }, []);
@@ -21,8 +18,6 @@ export default function PersonalDetails() {
   useEffect(() => {
     if (form.community_id) {
       const comm = communities.find((c) => c.community_id == form.community_id);
-      console.log('Selected community:', comm);
-      console.log('Castes:', comm?.castes);
       setCastes(comm?.castes || []);
     }
   }, [form.community_id, communities]);

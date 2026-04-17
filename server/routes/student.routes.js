@@ -18,14 +18,10 @@ router.get('/communities', async (req, res) => {
       include: [{ model: Caste, as: 'castes' }],
       order: [['community_name', 'ASC']]
     });
-    console.log('Communities fetched:', communities.length);
-    if (communities.length > 0) {
-      console.log('Sample community:', JSON.stringify(communities[0], null, 2));
-    }
     return res.json({ success: true, data: communities });
   } catch (err) {
     console.error('Error fetching communities:', err);
-    return res.status(500).json({ success: false, message: 'Failed to fetch communities', error: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to fetch communities' });
   }
 });
 
