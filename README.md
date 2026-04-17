@@ -519,105 +519,105 @@ client/src/
 erDiagram
     ACADEMIC_YEARS ||--o{ FEE_STRUCTURES : has
     ACADEMIC_YEARS ||--o{ APPLICATIONS : has
-    
     DISTRICTS ||--o{ COLLEGES : located_in
-    DISTRICTS ||--o{ STUDENTS : community
-    DISTRICTS ||--o{ STUDENTS : permanent
-    
-    COMMUNITIES ||--o{ CASTES : has
+    DISTRICTS ||--o{ STUDENTS : belongs_to
+    COMMUNITIES ||--o{ CASTES : contains
     COMMUNITIES ||--o{ STUDENTS : belongs_to
-    
     CASTES ||--o{ STUDENTS : belongs_to
-    
     COLLEGES ||--o{ COURSES : offers
     COLLEGES ||--o{ USERS : manages
     COLLEGES ||--o{ APPLICATION_COLLEGES : receives
-    
     STUDENTS ||--o{ APPLICATIONS : submits
     STUDENTS ||--o{ DOCUMENTS : uploads
     STUDENTS ||--o{ NOTIFICATIONS : receives
-    
-    APPLICATIONS ||--o{ APPLICATION_COLLEGES : lists_preferences
+    APPLICATIONS ||--o{ APPLICATION_COLLEGES : lists
     APPLICATIONS ||--o{ MARKS : contains
     APPLICATIONS ||--o{ PAYMENTS : requires
     APPLICATIONS ||--o{ DOCUMENTS : includes
-    
     APPLICATION_COLLEGES ||--o{ COURSES : chooses
-    
-    USERS {
-        int user_id PK
-        string email UK
-        enum role
-        int college_id FK
-    }
-    
-    STUDENTS {
-        int student_id PK
-        string mobile UK
-        string email
-        int community_id FK
-        int caste_id FK
-        tinyint is_verified
-    }
-    
-    APPLICATIONS {
-        int application_id PK
-        int student_id FK
-        int year_id FK
-        string application_no UK
-        enum status
-    }
-    
-    APPLICATION_COLLEGES {
-        int id PK
-        int application_id FK
-        int college_id FK
-        int course_id FK
-        int preference_order
-    }
-    
-    COLLEGES {
-        int college_id PK
-        string college_code UK
-        int district_id FK
-        enum gender_type
-        tinyint hostel_available
-    }
-    
-    COURSES {
-        int course_id PK
-        int college_id FK
-        string course_code
-        int intake_seats
-    }
-    
-    PAYMENTS {
-        int payment_id PK
-        int application_id FK UK
-        string order_id UK
-        enum status
-        decimal amount
-    }
-    
-    DOCUMENTS {
-        int doc_id PK
-        int application_id FK
-        string doc_type
-        string file_path
-        tinyint is_verified
-    }
-    
-    MARKS {
-        int mark_id PK
-        int application_id FK
-        string subject_name
-        decimal marks_obtained
-    }
+    USERS ||--o{ NOTIFICATIONS : sends
 ```
 
 ### Key Tables & Relationships
 
-| Table | Purpose | Key Relationships |
+#### Table Structures
+
+**USERS**
+| Column | Type | Constraint | Purpose |
+|--------|------|-----------|---------|
+| user_id | INT | PK | Unique identifier |
+| email | VARCHAR(255) | UK | Login email |
+| password_hash | VARCHAR(255) | | bcrypt hashed |
+| role | ENUM('admin', 'staff', 'student') | | Role-based access |
+| college_id | INT | FK | College association |
+| name | VARCHAR(100) | | Full name |
+| status | ENUM('active', 'inactive') | | Account status |
+
+**STUDENTS**
+| Column | Type | Constraint | Purpose |
+|--------|------|-----------|---------|
+| student_id | INT | PK | Unique identifier |
+| mobile | VARCHAR(10) | UK | Phone number (unique) |
+| email | VARCHAR(255) | | Email address |
+| name | VARCHAR(100) | | Full name |
+| dob | DATE | | Date of birth |
+| community_id | INT | FK | Social category |
+| caste_id | INT | FK | Caste designation |
+| is_verified | BOOLEAN | | Email/OTP verified |
+| created_at | TIMESTAMP | | Account creation |
+
+**APPLICATIONS**
+| Column | Type | Constraint | Purpose |
+|--------|------|-----------|---------|
+| application_id | INT | PK | Unique identifier |
+| student_id | INT | FK | Student reference |
+| application_no | VARCHAR(50) | UK | Application number |
+| year_id | INT | FK | Academic year |
+| status | ENUM('draft', 'submitted', 'approved', 'rejected', 'allocated') | | Application status |
+| submitted_at | TIMESTAMP | | Submission time |
+
+**APPLICATION_COLLEGES** (Preference List)
+| Column | Type | Constraint | Purpose |
+|--------|------|-----------|---------|
+| id | INT | PK | Unique identifier |
+| application_id | INT | FK | Application reference |
+| college_id | INT | FK | College choice |
+| course_id | INT | FK | Course choice |
+| preference_order | INT | | 1, 2, 3... order |
+
+**PAYMENTS**
+| Column | Type | Constraint | Purpose |
+|--------|------|-----------|---------|
+| payment_id | INT | PK | Unique identifier |
+| application_id | INT | FK UK | Application reference |
+| order_id | VARCHAR(100) | UK | CCAvenue order |
+| status | ENUM('initiated', 'success', 'failed', 'cancelled') | | Payment status |
+| amount | DECIMAL(10,2) | | Amount in rupees |
+| reference_no | VARCHAR(100) | | Bank reference |
+| paid_at | TIMESTAMP | | Payment time |
+
+**COLLEGES**
+| Column | Type | Constraint | Purpose |
+|--------|------|-----------|---------|
+| college_id | INT | PK | Unique identifier |
+| college_code | VARCHAR(20) | UK | College code (GPC001) |
+| college_name | VARCHAR(255) | | Full name |
+| district_id | INT | FK | Location |
+| gender_type | ENUM('Boys', 'Girls', 'Co-ed') | | College gender type |
+| hostel_available | BOOLEAN | | Hostel facility |
+| approved | BOOLEAN | | Approval status |
+
+**COURSES**
+| Column | Type | Constraint | Purpose |
+|--------|------|-----------|---------|
+| course_id | INT | PK | Unique identifier |
+| college_id | INT | FK | Offered by college |
+| course_code | VARCHAR(20) | | Course code |
+| course_name | VARCHAR(100) | | Full name |
+| intake_seats | INT | | Total seats |
+| specialization | VARCHAR(100) | | Branch |
+
+| Table | Purpose | Relationship Pattern |
 |-------|---------|---|
 | **students** | Student accounts | Mobile unique, community/caste FK |
 | **applications** | Application records | Student FK, multi-status tracking |
