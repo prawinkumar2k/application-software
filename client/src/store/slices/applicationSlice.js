@@ -66,6 +66,14 @@ const applicationSlice = createSlice({
       board: '', register_no: '', last_school: '', admission_type: 'FIRST_YEAR',
       // Marks
       marks: [],
+      // Education History
+      education: {
+        sections: [],
+        sslc: {},
+        hsc: {},
+        iti: {},
+        vocational: {},
+      },
       // Special
       is_differently_abled: 0, is_ex_servicemen: 0, is_sports_person: 0, is_govt_school: 0,
       // Hostel & colleges

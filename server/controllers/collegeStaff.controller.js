@@ -46,7 +46,8 @@ async function getCollegeApplications(req, res) {
     if (district_id) studentWhere.comm_district_id = district_id;
     if (hostel === 'true') studentWhere.hostel_required = 1;
 
-    const { count, rows } = await Application.findAndCountAll({
+    const count = await Application.count({ where: appWhere, include: [{ model: Student, as: 'student', where: studentWhere, required: true }] });
+    const rows = await Application.findAll({
       where: appWhere,
       include: [
         {

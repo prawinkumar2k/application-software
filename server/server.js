@@ -10,7 +10,7 @@ async function start() {
     console.log('✓ MySQL connected');
 
     // Sync models (use migrations in production)
-    await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
+    await sequelize.sync();
     console.log('✓ Models synced');
 
     app.listen(PORT, () => {

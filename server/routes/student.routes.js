@@ -45,14 +45,23 @@ router.get('/academic-years', async (req, res) => {
   }
 });
 
+router.get('/castes', async (req, res) => {
+  try {
+    const castes = await Caste.findAll({ order: [['caste_name', 'ASC']] });
+    return res.json({ success: true, data: castes });
+  } catch (err) {
+    console.error('Error fetching castes:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch castes' });
+  }
+});
+
 // Applications (requires student auth)
-router.use(verifyToken, requireStudent);
-router.post('/applications', appCtrl.createApplication);
-router.get('/applications', appCtrl.getMyApplications);
-router.put('/applications/:id', appCtrl.updateApplication);
-router.get('/applications/:id', appCtrl.getApplication);
-router.post('/applications/:id/submit', appCtrl.submitApplication);
-router.get('/applications/:id/pdf', appCtrl.downloadPDF);
-router.post('/applications/upload', upload.single('document'), appCtrl.uploadDocument);
+router.post('/applications', verifyToken, requireStudent, appCtrl.createApplication);
+router.get('/applications', verifyToken, requireStudent, appCtrl.getMyApplications);
+router.put('/applications/:id', verifyToken, requireStudent, appCtrl.updateApplication);
+router.get('/applications/:id', verifyToken, requireStudent, appCtrl.getApplication);
+router.post('/applications/:id/submit', verifyToken, requireStudent, appCtrl.submitApplication);
+router.get('/applications/:id/pdf', verifyToken, requireStudent, appCtrl.downloadPDF);
+router.post('/applications/upload', verifyToken, requireStudent, upload.single('document'), appCtrl.uploadDocument);
 
 module.exports = router;
