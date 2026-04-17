@@ -9,6 +9,7 @@ import ContactDetails from '../../components/forms/ContactDetails';
 import ParentDetails from '../../components/forms/ParentDetails';
 import AcademicHistory from '../../components/forms/AcademicHistory';
 import MarksEntry from '../../components/forms/MarksEntry';
+import EducationalHistory from '../../components/forms/EducationalHistory';
 import SpecialCategory from '../../components/forms/SpecialCategory';
 import CollegeChoice from '../../components/forms/CollegeChoice';
 import PreviewSubmit from '../../components/forms/PreviewSubmit';
@@ -21,9 +22,10 @@ const STEPS = [
   { id: 3, label: 'Parent', component: ParentDetails },
   { id: 4, label: 'Academic', component: AcademicHistory },
   { id: 5, label: 'Marks', component: MarksEntry },
-  { id: 6, label: 'Special', component: SpecialCategory },
-  { id: 7, label: 'Colleges', component: CollegeChoice },
-  { id: 8, label: 'Submit', component: null },
+  { id: 6, label: 'Education', component: EducationalHistory },
+  { id: 7, label: 'Special', component: SpecialCategory },
+  { id: 8, label: 'Colleges', component: CollegeChoice },
+  { id: 9, label: 'Submit', component: null },
 ];
 
 export default function ApplicationForm() {
@@ -60,7 +62,7 @@ export default function ApplicationForm() {
 
   const next = async () => {
     await saveProgress();
-    if (currentStep < 8) dispatch(setCurrentStep(currentStep + 1));
+    if (currentStep < 9) dispatch(setCurrentStep(currentStep + 1))
   };
 
   const prev = () => {
@@ -155,7 +157,7 @@ export default function ApplicationForm() {
         <div className="card min-h-64">
           {loading && !current ? (
             <Spinner size="lg" className="py-20" />
-          ) : currentStep === 8 ? (
+          ) : currentStep === 9 ? (
             <PreviewSubmit onDeclarationChange={setDeclaration} declarationChecked={declaration} />
           ) : StepComponent ? (
             <StepComponent />
@@ -168,7 +170,7 @@ export default function ApplicationForm() {
             <ChevronLeft size={16} /> Previous
           </button>
           <span className="text-sm text-gray-500">Step {currentStep} of {STEPS.length}</span>
-          {currentStep < 8 ? (
+          {currentStep < 9 ? (
             <button onClick={next} disabled={saving} className="btn-primary flex items-center gap-2">
               {saving ? <Spinner size="sm" /> : null}
               Save & Next <ChevronRight size={16} />
