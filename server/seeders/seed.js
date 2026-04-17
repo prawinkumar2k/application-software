@@ -9,7 +9,7 @@ const TN_DISTRICTS = [
   'Chengalpattu','Kallakurichi','Krishnagiri','Dharmapuri','Villupuram',
   'Cuddalore','Ariyalur','Perambalur','Karur','Namakkal','Nilgiris',
   'Ramanathapuram','Pudukkottai','Tenkasi','Tirupattur','Tiruvarur',
-  'Mayiladuthurai','Kanniyakumari'
+  'Mayiladuthurai','Kanniyakumari','Thiruvallur'
 ];
 
 const COMMUNITIES = [

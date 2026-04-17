@@ -75,7 +75,7 @@ export default function PreviewSubmit({ onDeclarationChange, declarationChecked 
         <h4 className="font-medium text-primary mb-3 text-sm">College Preferences ({prefs.length})</h4>
         {prefs.length === 0 ? <p className="text-sm text-red-600">No colleges selected. Please go back and add at least one college.</p> : (
           <ol className="space-y-1 text-sm">
-            {prefs.sort((a, b) => a.preference_order - b.preference_order).map((p, i) => (
+            {[...prefs].sort((a, b) => a.preference_order - b.preference_order).map((p, i) => (
               <li key={i} className="flex items-center gap-2">
                 <span className="font-bold text-primary w-6">{i + 1}.</span>
                 <span>{p.college?.college_name || `College ID: ${p.college_id}`}</span>

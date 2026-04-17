@@ -21,7 +21,7 @@ export default function AdminColleges() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchAllCollegesAdmin({}));
+    dispatch(fetchAllCollegesAdmin({ limit: 1000, page: 1 }));
     api.get('/admin/districts').then((r) => setDistricts(r.data.data || []));
   }, [dispatch]);
 
@@ -41,7 +41,7 @@ export default function AdminColleges() {
         dispatch(addToast({ type: 'success', message: 'College created' }));
       }
       setShowModal(false);
-      dispatch(fetchAllCollegesAdmin({}));
+      dispatch(fetchAllCollegesAdmin({ limit: 1000, page: 1 }));
     } catch (err) {
       dispatch(addToast({ type: 'error', message: err.response?.data?.message || 'Failed' }));
     }
@@ -53,7 +53,7 @@ export default function AdminColleges() {
     try {
       await api.delete(`/admin/colleges/${id}`);
       dispatch(addToast({ type: 'success', message: 'College deactivated' }));
-      dispatch(fetchAllCollegesAdmin({}));
+      dispatch(fetchAllCollegesAdmin({ limit: 1000, page: 1 }));
     } catch { dispatch(addToast({ type: 'error', message: 'Failed' })); }
   };
 

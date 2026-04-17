@@ -12,8 +12,24 @@ export default function CollegeDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/college/applications', { params: { limit: 1 } })
-      .then((r) => setStats({ total: r.data.pagination?.total || 0 }))
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - dayOfWeek);
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    const fmt = (d) => d.toISOString().split('T')[0];
+
+    Promise.all([
+      api.get('/college/applications', { params: { limit: 1 } }),
+      api.get('/college/applications', { params: { limit: 1, start_date: fmt(startOfWeek), end_date: fmt(endOfWeek) } }),
+    ])
+      .then(([all, week]) => setStats({
+        total: all.data.pagination?.total || 0,
+        thisWeek: week.data.pagination?.total || 0,
+      }))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -33,7 +49,7 @@ export default function CollegeDashboard() {
               <p className="text-gray-500 text-sm">Total Applications Received</p>
             </div>
             <div className="card text-center">
-              <p className="text-4xl font-bold text-amber-500 mb-1">—</p>
+              <p className="text-4xl font-bold text-amber-500 mb-1">{stats?.thisWeek ?? 0}</p>
               <p className="text-gray-500 text-sm">Applications This Week</p>
             </div>
           </div>
