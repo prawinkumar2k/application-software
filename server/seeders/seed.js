@@ -21,6 +21,15 @@ const COMMUNITIES = [
   { community_code: 'BCM', community_name: 'Backward Class Muslim' },
 ];
 
+const CASTES_BY_COMMUNITY = {
+  'OC': ['General', 'Hindu Forward', 'Christian', 'Others'],
+  'BC': ['Arunthathiyar', 'Agamudiyar', 'Chakkiliar', 'Devendra Kula Vellalar'],
+  'MBC': ['Nadar', 'Mudaliar', 'Gounder', 'Reddiar'],
+  'SC': ['Arunthathiyar', 'Pallan', 'Paraiyar', 'Sambavar'],
+  'ST': ['Irular', 'Toda', 'Kota', 'Kurumbar'],
+  'BCM': ['Sheik Ali', 'Sayyed', 'Pathan', 'Labbai'],
+};
+
 async function seed() {
   try {
     await sequelize.authenticate();
@@ -38,6 +47,20 @@ async function seed() {
       await Community.findOrCreate({ where: { community_code: c.community_code }, defaults: c });
     }
     console.log('✓ Communities seeded');
+
+    // Castes linked to communities
+    for (const [communityCode, castes] of Object.entries(CASTES_BY_COMMUNITY)) {
+      const community = await Community.findOne({ where: { community_code: communityCode } });
+      if (community) {
+        for (const casteName of castes) {
+          await Caste.findOrCreate({
+            where: { community_id: community.community_id, caste_name: casteName },
+            defaults: { community_id: community.community_id, caste_name: casteName, caste_code: casteName.substring(0, 3).toUpperCase() },
+          });
+        }
+      }
+    }
+    console.log('✓ Castes seeded (linked to communities)');
 
     // Academic year
     const [year] = await AcademicYear.findOrCreate({
