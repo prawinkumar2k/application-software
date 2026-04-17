@@ -10,7 +10,9 @@ export default function ContactDetails() {
   const [sameAddress, setSameAddress] = useState(false);
 
   useEffect(() => {
-    api.get('/admin/districts').then((r) => setDistricts(r.data.data || [])).catch(() => {});
+    api.get('/districts').then((r) => setDistricts(r.data.data || [])).catch((err) => {
+      console.error('Failed to fetch districts:', err);
+    });
   }, []);
 
   const update = (k, v) => dispatch(updateFormData({ [k]: v }));

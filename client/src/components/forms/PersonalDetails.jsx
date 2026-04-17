@@ -10,7 +10,9 @@ export default function PersonalDetails() {
   const [castes, setCastes] = useState([]);
 
   useEffect(() => {
-    api.get('/admin/communities').then((r) => setCommunities(r.data.data || [])).catch(() => {});
+    api.get('/communities').then((r) => setCommunities(r.data.data || [])).catch((err) => {
+      console.error('Failed to fetch communities:', err);
+    });
   }, []);
 
   useEffect(() => {
