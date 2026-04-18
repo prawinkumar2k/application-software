@@ -55,12 +55,17 @@ export default function CollegeApplications() {
             <option value="true">Hostel Required</option>
           </select>
           <button onClick={load} className="btn-primary text-sm flex items-center gap-1"><Search size={14} /> Filter</button>
-          {pagination && <span className="self-center text-sm text-gray-500 ml-auto">Total: {pagination.total}</span>}
+          {pagination && <span className="self-center text-sm text-gray-600 ml-auto font-medium">Total: {pagination.total} applications</span>}
         </div>
 
         {/* Table */}
         <div className="card !p-0 overflow-hidden">
-          {loading ? <Spinner size="md" className="py-12" /> : (
+          {loading ? <Spinner size="md" className="py-12" /> : apps.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-gray-500 text-base mb-2">No applications received yet</p>
+              <p className="text-gray-400 text-sm">Applications will appear here once students submit their forms</p>
+            </div>
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
@@ -84,7 +89,6 @@ export default function CollegeApplications() {
                   ))}
                 </tbody>
               </table>
-              {apps.length === 0 && <p className="text-center py-8 text-gray-400 text-sm">No applications found</p>}
             </div>
           )}
         </div>

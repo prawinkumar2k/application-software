@@ -10,19 +10,65 @@ export default function AdminReports() {
   const [data, setData] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [tab, setTab] = useState('applications');
+  const [error, setError] = useState('');
 
   const upd = (k, v) => setFilters((p) => ({ ...p, [k]: v }));
 
   const fetchReport = async () => {
     setLoading(true);
+    setError('');
     try {
       const endpoint = tab === 'applications' ? '/admin/reports/applications' : '/admin/reports/payments';
       const res = await api.get(endpoint, { params: filters });
       setData(res.data.data || []);
       setPagination(res.data.pagination);
-    } catch { }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to fetch report');
+      setData([]);
+    }
     setLoading(false);
+  };
+
+  const downloadReport = async () => {
+    setDownloading(true);
+    setError('');
+    try {
+      const endpoint = tab === 'applications' ? '/admin/reports/applications/download' : '/admin/reports/payments/download';
+      const res = await api.get(endpoint, { params: filters, responseType: 'blob' });
+
+      const contentType = res.headers['content-type'] || '';
+      if (contentType.includes('application/json')) {
+        const text = await res.data.text();
+        const json = JSON.parse(text);
+        setError(json.message || 'No data found');
+        setDownloading(false);
+        return;
+      }
+
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${tab}_report_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      if (err.response?.data instanceof Blob) {
+        const text = await err.response.data.text();
+        try {
+          const json = JSON.parse(text);
+          setError(json.message || 'Failed to download report');
+        } catch {
+          setError('Failed to download report');
+        }
+      } else {
+        setError(err.response?.data?.message || 'Failed to download report');
+      }
+    }
+    setDownloading(false);
   };
 
   return (
@@ -33,7 +79,7 @@ export default function AdminReports() {
         {/* Tabs */}
         <div className="flex gap-2 border-b">
           {['applications', 'payments'].map((t) => (
-            <button key={t} onClick={() => { setTab(t); setData([]); }}
+            <button key={t} onClick={() => { setTab(t); setData([]); setError(''); }}
               className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${tab === t ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
               {t}
             </button>
@@ -79,8 +125,16 @@ export default function AdminReports() {
               </div>
             )}
           </div>
+
+          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+
           <div className="flex gap-2 mt-4">
-            <button onClick={fetchReport} className="btn-primary flex items-center gap-2 text-sm"><Search size={14} /> Generate Report</button>
+            <button onClick={fetchReport} disabled={loading} className="btn-primary flex items-center gap-2 text-sm disabled:opacity-60">
+              <Search size={14} /> Generate Report
+            </button>
+            <button onClick={downloadReport} disabled={downloading} className="btn-secondary flex items-center gap-2 text-sm disabled:opacity-60">
+              <Download size={14} /> {downloading ? 'Downloading...' : 'Download CSV'}
+            </button>
           </div>
         </div>
 
@@ -117,7 +171,7 @@ export default function AdminReports() {
                       <tr key={p.payment_id} className="hover:bg-gray-50">
                         <td className="px-3 py-2 font-mono text-xs">{p.order_id}</td>
                         <td className="px-3 py-2 text-xs">{p.application?.application_no}</td>
-                        <td className="px-3 py-2 font-semibold">₹{p.amount}</td>
+                        <td className="px-3 py-2 font-semibold">Rs.{p.amount}</td>
                         <td className="px-3 py-2"><StatusBadge status={p.status} /></td>
                         <td className="px-3 py-2 text-xs">{p.payment_mode || '-'}</td>
                         <td className="px-3 py-2 text-xs text-gray-500">{new Date(p.created_at).toLocaleDateString('en-IN')}</td>

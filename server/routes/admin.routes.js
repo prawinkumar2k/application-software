@@ -43,8 +43,14 @@ router.put('/academic-years/:id', adminCtrl.updateAcademicYear);
 router.get('/fee-structures', adminCtrl.getFeeStructures);
 router.post('/fee-structures', adminCtrl.upsertFeeStructure);
 
+// Applications management
+router.get('/applications', adminCtrl.getApplications);
+router.patch('/applications/:id/status', adminCtrl.updateApplicationStatus);
+
 // Reports
 router.get('/reports/applications', adminCtrl.getApplicationReport);
+router.get('/reports/applications/download', adminCtrl.downloadApplicationReport);
 router.get('/reports/payments', adminCtrl.getPaymentReport);
+router.get('/reports/payments/download', adminCtrl.downloadPaymentReport);
 
 module.exports = router;

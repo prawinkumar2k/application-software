@@ -9,6 +9,7 @@ const studentLinks = [
 
 const adminLinks = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/admin/applications', icon: ClipboardList, label: 'Applications' },
   { to: '/admin/colleges', icon: Building2, label: 'Colleges & Courses' },
   { to: '/admin/users', icon: Users, label: 'User Management' },
   { to: '/admin/master-data', icon: Database, label: 'Master Data' },
