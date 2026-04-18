@@ -9,6 +9,6 @@ const Notification = sequelize.define('Notification', {
   body: { type: DataTypes.TEXT },
   status: { type: DataTypes.ENUM('SENT','FAILED','PENDING'), defaultValue: 'PENDING' },
   sent_at: { type: DataTypes.DATE, allowNull: true },
-}, { tableName: 'notifications' });
+}, { tableName: 'notifications', timestamps: true, underscored: true });
 
 module.exports = Notification;

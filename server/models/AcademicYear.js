@@ -7,6 +7,6 @@ const AcademicYear = sequelize.define('AcademicYear', {
   is_active: { type: DataTypes.TINYINT, defaultValue: 0 },
   app_open_date: { type: DataTypes.DATEONLY, allowNull: true },
   app_close_date: { type: DataTypes.DATEONLY, allowNull: true },
-}, { tableName: 'academic_years' });
+}, { tableName: 'academic_years', timestamps: true, underscored: true });
 
 module.exports = AcademicYear;

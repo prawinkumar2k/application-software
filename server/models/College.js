@@ -14,6 +14,6 @@ const College = sequelize.define('College', {
   phone: { type: DataTypes.STRING(15) },
   email: { type: DataTypes.STRING(100) },
   is_active: { type: DataTypes.TINYINT, defaultValue: 1 },
-}, { tableName: 'colleges' });
+}, { tableName: 'colleges', timestamps: true, underscored: true });
 
 module.exports = College;

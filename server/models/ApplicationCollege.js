@@ -7,6 +7,6 @@ const ApplicationCollege = sequelize.define('ApplicationCollege', {
   college_id: { type: DataTypes.INTEGER, allowNull: false },
   course_id: { type: DataTypes.INTEGER, allowNull: true },
   preference_order: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
-}, { tableName: 'application_colleges' });
+}, { tableName: 'application_colleges', timestamps: true, underscored: true });
 
 module.exports = ApplicationCollege;

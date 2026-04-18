@@ -11,6 +11,6 @@ const Document = sequelize.define('Document', {
   mime_type: { type: DataTypes.STRING(100) },
   is_verified: { type: DataTypes.TINYINT, defaultValue: 0 },
   verified_by: { type: DataTypes.INTEGER, allowNull: true },
-}, { tableName: 'documents' });
+}, { tableName: 'documents', timestamps: true, underscored: true });
 
 module.exports = Document;

@@ -39,6 +39,6 @@ const Student = sequelize.define('Student', {
   otp_expires: { type: DataTypes.DATE },
   is_verified: { type: DataTypes.TINYINT, defaultValue: 0 },
   refresh_token: { type: DataTypes.TEXT },
-}, { tableName: 'students' });
+}, { tableName: 'students', timestamps: true, underscored: true });
 
 module.exports = Student;

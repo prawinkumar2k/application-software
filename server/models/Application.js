@@ -12,6 +12,6 @@ const Application = sequelize.define('Application', {
     defaultValue: 'DRAFT'
   },
   submitted_at: { type: DataTypes.DATE, allowNull: true },
-}, { tableName: 'applications' });
+}, { tableName: 'applications', timestamps: true, underscored: true });
 
 module.exports = Application;

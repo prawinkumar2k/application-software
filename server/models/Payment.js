@@ -11,6 +11,6 @@ const Payment = sequelize.define('Payment', {
   bank_ref_no: { type: DataTypes.STRING(100) },
   payment_mode: { type: DataTypes.STRING(50) },
   failure_message: { type: DataTypes.TEXT },
-}, { tableName: 'payments' });
+}, { tableName: 'payments', timestamps: true, underscored: true });
 
 module.exports = Payment;

@@ -11,6 +11,6 @@ const User = sequelize.define('User', {
   is_active: { type: DataTypes.TINYINT, defaultValue: 1 },
   last_login: { type: DataTypes.DATE, allowNull: true },
   refresh_token: { type: DataTypes.TEXT, allowNull: true },
-}, { tableName: 'users' });
+}, { tableName: 'users', timestamps: true, underscored: true });
 
 module.exports = User;

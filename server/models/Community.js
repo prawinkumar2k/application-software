@@ -7,6 +7,8 @@ const Community = sequelize.define('Community', {
   community_name: { type: DataTypes.STRING(100), allowNull: false },
 }, {
   tableName: 'master_communities',
+  timestamps: true,
+  underscored: true,
   indexes: [
     { unique: true, fields: ['community_code'], name: 'idx_community_code' }
   ]

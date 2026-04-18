@@ -9,6 +9,6 @@ const Course = sequelize.define('Course', {
   intake_seats: { type: DataTypes.INTEGER, defaultValue: 60 },
   duration_years: { type: DataTypes.INTEGER, defaultValue: 3 },
   is_active: { type: DataTypes.TINYINT, defaultValue: 1 },
-}, { tableName: 'courses' });
+}, { tableName: 'courses', timestamps: true, underscored: true });
 
 module.exports = Course;
