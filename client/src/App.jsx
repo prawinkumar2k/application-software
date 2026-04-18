@@ -1,5 +1,8 @@
+import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { ProtectedRoute, PublicRoute } from './routes/ProtectedRoute';
+import { restoreStudentProfile } from './store/slices/authSlice';
 import Toast from './components/common/Toast';
 
 // Public
@@ -21,6 +24,7 @@ import AdminColleges from './pages/admin/Colleges';
 import AdminUsers from './pages/admin/Users';
 import AdminReports from './pages/admin/Reports';
 import AdminMasterData from './pages/admin/MasterData';
+import AdminApplications from './pages/admin/Applications';
 
 // College
 import CollegeDashboard from './pages/college/Dashboard';
@@ -28,6 +32,15 @@ import CollegeApplications from './pages/college/Applications';
 import CollegeReports from './pages/college/Reports';
 
 export default function App() {
+  const dispatch = useDispatch();
+  const { token, role, student } = useSelector((s) => s.auth);
+
+  useEffect(() => {
+    if (token && role === 'student' && !student) {
+      dispatch(restoreStudentProfile());
+    }
+  }, [token, role]);
+
   return (
     <>
       <Toast />
@@ -52,6 +65,7 @@ export default function App() {
         <Route path="/admin/users" element={<ProtectedRoute requiredRole="SUPER_ADMIN"><AdminUsers /></ProtectedRoute>} />
         <Route path="/admin/reports" element={<ProtectedRoute requiredRole="SUPER_ADMIN"><AdminReports /></ProtectedRoute>} />
         <Route path="/admin/master-data" element={<ProtectedRoute requiredRole="SUPER_ADMIN"><AdminMasterData /></ProtectedRoute>} />
+        <Route path="/admin/applications" element={<ProtectedRoute requiredRole="SUPER_ADMIN"><AdminApplications /></ProtectedRoute>} />
 
         {/* College */}
         <Route path="/college/dashboard" element={<ProtectedRoute requiredRole="COLLEGE_STAFF"><CollegeDashboard /></ProtectedRoute>} />

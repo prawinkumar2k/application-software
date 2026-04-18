@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const { Op } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
 const { Application, Student, ApplicationCollege, Mark, Payment, Document, College, Course, AcademicYear, District, Community, Caste } = require('../models');
@@ -33,6 +35,23 @@ function generateAppNo(yearLabel, studentId) {
   return `DOTE${year}${String(studentId).padStart(6, '0')}`;
 }
 
+// GET /application-status — check if student has submitted
+async function getApplicationStatus(req, res) {
+  try {
+    const studentId = req.user.student_id;
+    const app = await Application.findOne({
+      where: { student_id: studentId },
+      include: [{ model: AcademicYear, as: 'academicYear' }],
+      order: [['created_at', 'DESC']],
+    });
+    const hasApplication = !!app;
+    const hasSubmitted = app ? app.status !== 'DRAFT' : false;
+    return success(res, { hasApplication, hasSubmitted, application: app });
+  } catch (err) {
+    return error(res, 'Failed to fetch application status', 500);
+  }
+}
+
 // POST /applications — create draft
 async function createApplication(req, res) {
   try {
@@ -40,6 +59,16 @@ async function createApplication(req, res) {
     const activeYear = await AcademicYear.findOne({ where: { is_active: 1 } });
     if (!activeYear) return error(res, 'No active admission cycle found', 400);
 
+    // RULE: Block if student already has a submitted application (any year)
+    const submittedApp = await Application.findOne({
+      where: {
+        student_id: studentId,
+        status: { [Op.in]: ['SUBMITTED', 'PAID', 'VERIFIED', 'ALLOCATED', 'REJECTED'] },
+      },
+    });
+    if (submittedApp) return error(res, 'You have already submitted an application', 400);
+
+    // Return existing draft for same year instead of creating duplicate
     const existing = await Application.findOne({ where: { student_id: studentId, year_id: activeYear.year_id } });
     if (existing) return success(res, existing, 'Draft already exists');
 
@@ -138,8 +167,22 @@ async function submitApplication(req, res) {
     const prefs = app.collegePreferences || [];
     if (prefs.length === 0) return error(res, 'Please add at least one college preference', 400);
 
-    // Get fee for student's community
+    // RULE: Passport photo must be uploaded before submission
+    const photoDoc = await Document.findOne({ where: { application_id: app.application_id, doc_type: 'photo' } });
+    if (!photoDoc) return error(res, 'Passport size photo upload is required before submitting', 400);
+
+    // Get student details for aadhaar check and fee calculation
     const student = await Student.findByPk(studentId, { include: STUDENT_INCLUDE });
+
+    // RULE: Aadhaar is mandatory before submission
+    if (!student?.aadhaar) return error(res, 'Aadhaar number is required before submitting', 400);
+
+    // RULE: Block if another application already used this Aadhaar
+    const aadhaarConflict = await Application.findOne({
+      where: { aadhaar_number: student.aadhaar, application_id: { [Op.ne]: app.application_id } },
+    });
+    if (aadhaarConflict) return error(res, 'Application already exists for this Aadhaar number', 400);
+
     const communityCode = student?.community?.community_code || 'GENERAL';
 
     const { FeeStructure } = require('../models');
@@ -150,7 +193,12 @@ async function submitApplication(req, res) {
 
     // Zero-fee: directly mark as SUBMITTED
     if (feeAmount === 0) {
-      await app.update({ status: 'SUBMITTED', submitted_at: new Date() });
+      try {
+        await app.update({ status: 'SUBMITTED', submitted_at: new Date(), aadhaar_number: student.aadhaar });
+      } catch (dupErr) {
+        if (dupErr.original?.code === 'ER_DUP_ENTRY') return error(res, 'Application already exists for this Aadhaar number', 400);
+        throw dupErr;
+      }
       const orderId = `DOTE-FREE-${app.application_id}-${Date.now()}`;
       await Payment.create({ application_id: app.application_id, order_id: orderId, amount: 0, status: 'SUCCESS' });
       if (student?.email) {
@@ -162,7 +210,12 @@ async function submitApplication(req, res) {
     // Non-zero fee: return order details for CCAvenue
     const orderId = `DOTE-${app.application_id}-${Date.now()}`;
     await Payment.create({ application_id: app.application_id, order_id: orderId, amount: feeAmount, status: 'PENDING' });
-    await app.update({ status: 'SUBMITTED', submitted_at: new Date() });
+    try {
+      await app.update({ status: 'SUBMITTED', submitted_at: new Date(), aadhaar_number: student.aadhaar });
+    } catch (dupErr) {
+      if (dupErr.original?.code === 'ER_DUP_ENTRY') return error(res, 'Application already exists for this Aadhaar number', 400);
+      throw dupErr;
+    }
 
     return success(res, { application: app, paymentRequired: true, orderId, amount: feeAmount }, 'Application submitted. Proceed to payment.');
   } catch (err) {
@@ -188,11 +241,55 @@ async function downloadPDF(req, res) {
   }
 }
 
-// Upload document
+// GET /applications/:id/documents
+async function getDocuments(req, res) {
+  try {
+    const studentId = req.user.student_id;
+    const app = await Application.findOne({ where: { application_id: req.params.id, student_id: studentId } });
+    if (!app) return error(res, 'Application not found', 404);
+    const docs = await Document.findAll({
+      where: { application_id: req.params.id },
+      attributes: ['doc_id', 'doc_type', 'original_name', 'file_size', 'mime_type', 'created_at'],
+      order: [['created_at', 'DESC']],
+    });
+    return success(res, docs);
+  } catch (err) {
+    return error(res, 'Failed to fetch documents', 500);
+  }
+}
+
+// POST /applications/upload
 async function uploadDocument(req, res) {
+  const filePath = req.file?.path;
   try {
     const { application_id, doc_type } = req.body;
     if (!req.file) return error(res, 'No file uploaded', 400);
+    if (!application_id) return error(res, 'application_id is required', 400);
+    if (!['photo', 'tc', 'marksheet'].includes(doc_type)) return error(res, 'doc_type must be photo, tc, or marksheet', 400);
+
+    // Photo: image only, max 2MB
+    if (doc_type === 'photo') {
+      if (!['image/jpeg', 'image/png'].includes(req.file.mimetype)) {
+        fs.unlinkSync(filePath);
+        return error(res, 'Passport photo must be a JPEG or PNG image', 400);
+      }
+      if (req.file.size > 2 * 1024 * 1024) {
+        fs.unlinkSync(filePath);
+        return error(res, 'Passport photo must be under 2MB', 400);
+      }
+    }
+
+    // Verify application belongs to this student
+    const app = await Application.findOne({ where: { application_id, student_id: req.user.student_id } });
+    if (!app) { fs.unlinkSync(filePath); return error(res, 'Application not found', 404); }
+
+    // Remove existing document of the same type (replace instead of accumulate)
+    const existing = await Document.findOne({ where: { application_id, doc_type } });
+    if (existing) {
+      try { if (fs.existsSync(existing.file_path)) fs.unlinkSync(existing.file_path); } catch (_) {}
+      await existing.destroy();
+    }
+
     const doc = await Document.create({
       application_id,
       doc_type,
@@ -203,8 +300,10 @@ async function uploadDocument(req, res) {
     });
     return success(res, doc, 'Document uploaded', 201);
   } catch (err) {
+    if (filePath) { try { fs.unlinkSync(filePath); } catch (_) {} }
+    console.error(err);
     return error(res, 'Failed to upload document', 500);
   }
 }
 
-module.exports = { createApplication, updateApplication, getApplication, getMyApplications, submitApplication, downloadPDF, uploadDocument };
+module.exports = { getApplicationStatus, createApplication, updateApplication, getApplication, getMyApplications, submitApplication, downloadPDF, getDocuments, uploadDocument };

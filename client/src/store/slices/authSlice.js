@@ -43,6 +43,15 @@ export const logoutUser = createAsyncThunk('auth/logout', async (_, { rejectWith
   } catch (_) {}
 });
 
+export const restoreStudentProfile = createAsyncThunk('auth/restoreStudentProfile', async (_, { rejectWithValue }) => {
+  try {
+    const res = await api.get('/profile');
+    return res.data.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || 'Failed to restore profile');
+  }
+});
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
@@ -112,9 +121,18 @@ const authSlice = createSlice({
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null; state.student = null; state.token = null; state.role = null;
         localStorage.removeItem('token'); localStorage.removeItem('role');
+      })
+
+      .addCase(restoreStudentProfile.fulfilled, (state, action) => {
+        state.student = action.payload;
+      })
+      .addCase(restoreStudentProfile.rejected, (state) => {
+        state.token = null; state.role = null;
+        localStorage.removeItem('token'); localStorage.removeItem('role');
       });
   },
 });
 
 export const { setToken, clearAuth, clearError } = authSlice.actions;
+export { authSlice };
 export default authSlice.reducer;

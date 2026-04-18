@@ -4,6 +4,7 @@ const { verifyToken } = require('../middleware/auth.middleware');
 const { requireStudent } = require('../middleware/role.middleware');
 const upload = require('../middleware/upload.middleware');
 const appCtrl = require('../controllers/application.controller');
+const studentCtrl = require('../controllers/student.controller');
 const { getAvailableColleges } = require('../controllers/college.controller');
 const adminCtrl = require('../controllers/admin.controller');
 const { Community, Caste, AcademicYear, District } = require('../models');
@@ -55,13 +56,19 @@ router.get('/castes', async (req, res) => {
   }
 });
 
+// Student profile (requires student auth)
+router.get('/profile', verifyToken, requireStudent, studentCtrl.getProfile);
+router.put('/profile', verifyToken, requireStudent, studentCtrl.updateProfile);
+
 // Applications (requires student auth)
+router.get('/application-status', verifyToken, requireStudent, appCtrl.getApplicationStatus);
 router.post('/applications', verifyToken, requireStudent, appCtrl.createApplication);
 router.get('/applications', verifyToken, requireStudent, appCtrl.getMyApplications);
 router.put('/applications/:id', verifyToken, requireStudent, appCtrl.updateApplication);
 router.get('/applications/:id', verifyToken, requireStudent, appCtrl.getApplication);
 router.post('/applications/:id/submit', verifyToken, requireStudent, appCtrl.submitApplication);
 router.get('/applications/:id/pdf', verifyToken, requireStudent, appCtrl.downloadPDF);
+router.get('/applications/:id/documents', verifyToken, requireStudent, appCtrl.getDocuments);
 router.post('/applications/upload', verifyToken, requireStudent, upload.single('document'), appCtrl.uploadDocument);
 
 module.exports = router;

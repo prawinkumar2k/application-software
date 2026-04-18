@@ -151,13 +151,19 @@ CREATE TABLE IF NOT EXISTS applications (
   student_id INT NOT NULL,
   year_id INT NOT NULL,
   application_no VARCHAR(30) UNIQUE,
+  aadhaar_number VARCHAR(12) NULL,
   status ENUM('DRAFT','SUBMITTED','PAID','VERIFIED','ALLOCATED','REJECTED') DEFAULT 'DRAFT',
   submitted_at DATETIME NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
-  FOREIGN KEY (year_id) REFERENCES academic_years(year_id) ON DELETE CASCADE
+  FOREIGN KEY (year_id) REFERENCES academic_years(year_id) ON DELETE CASCADE,
+  CONSTRAINT unique_aadhaar UNIQUE (aadhaar_number)
 ) ENGINE=InnoDB;
+
+-- Migration for existing databases:
+-- ALTER TABLE applications ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(12) NULL;
+-- ALTER TABLE applications ADD CONSTRAINT unique_aadhaar UNIQUE (aadhaar_number);
 
 -- 10. Application College Preferences (N:M ordered)
 CREATE TABLE IF NOT EXISTS application_colleges (

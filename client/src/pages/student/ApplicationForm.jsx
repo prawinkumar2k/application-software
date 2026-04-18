@@ -14,7 +14,7 @@ import SpecialCategory from '../../components/forms/SpecialCategory';
 import CollegeChoice from '../../components/forms/CollegeChoice';
 import PreviewSubmit from '../../components/forms/PreviewSubmit';
 import Spinner from '../../components/common/Spinner';
-import { CheckCircle, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Save, AlertCircle } from 'lucide-react';
 
 const STEPS = [
   { id: 1, label: 'Personal', component: PersonalDetails },
@@ -28,22 +28,72 @@ const STEPS = [
   { id: 9, label: 'Submit', component: null },
 ];
 
+function validateStep(step, formData) {
+  switch (step) {
+    case 1:
+      if (!formData.name?.trim()) return 'Full name is required';
+      if (!formData.dob) return 'Date of birth is required';
+      if (!formData.gender) return 'Gender is required';
+      if (!formData.aadhaar || !/^\d{12}$/.test(formData.aadhaar)) return 'Valid 12-digit Aadhaar number is required';
+      if (!formData.community_id) return 'Community is required';
+      if (!formData.admission_type) return 'Admission type is required';
+      return null;
+    case 2:
+      if (!formData.comm_address?.trim()) return 'Communication address is required';
+      if (!formData.comm_city?.trim()) return 'City / Town is required';
+      if (!formData.comm_district_id) return 'District is required';
+      return null;
+    case 3:
+      if (!formData.father_name?.trim()) return "Father's name is required";
+      if (!formData.mother_name?.trim()) return "Mother's name is required";
+      return null;
+    case 4:
+      if (!formData.board) return 'Qualifying examination board is required';
+      if (!formData.register_no?.trim()) return 'Register number is required';
+      if (!formData.last_school?.trim()) return 'Name of last school / institute is required';
+      return null;
+    case 5: {
+      if (!formData.marks?.length) return 'Please add at least one mark entry';
+      const incomplete = formData.marks.find(m => !m.subject_name?.trim() || m.marks_obtained === '' || m.marks_obtained == null);
+      if (incomplete) return 'Please complete all mark entries (subject name and marks obtained)';
+      return null;
+    }
+    case 6:
+    case 7:
+      return null;
+    case 8:
+      if (!formData.college_preferences?.length) return 'Please select at least one college preference';
+      return null;
+    default:
+      return null;
+  }
+}
+
 export default function ApplicationForm() {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { current, currentStep, formData, loading } = useSelector((s) => s.application);
   const [declaration, setDeclaration] = useState(false);
+  const [photoUploaded, setPhotoUploaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [stepError, setStepError] = useState('');
+  const [maxReachedStep, setMaxReachedStep] = useState(currentStep);
 
   useEffect(() => {
     const init = async () => {
       if (id) {
-        await dispatch(fetchApplication(id));
+        const res = await dispatch(fetchApplication(id));
+        if (res.meta.requestStatus === 'fulfilled') {
+          setMaxReachedStep(9);
+        }
       } else {
         const res = await dispatch(createApplication());
         if (res.meta.requestStatus === 'fulfilled') {
           navigate(`/student/apply/${res.payload.application_id}`, { replace: true });
+        } else {
+          dispatch(addToast({ type: 'error', message: res.payload || 'Failed to create application' }));
+          navigate('/student/dashboard');
         }
       }
     };
@@ -57,16 +107,37 @@ export default function ApplicationForm() {
     setSaving(true);
     await dispatch(updateApplication({ id: appId, data: formData }));
     setSaving(false);
-    dispatch(addToast({ type: 'success', message: 'Progress saved!' }));
   };
 
   const next = async () => {
+    const err = validateStep(currentStep, formData);
+    if (err) {
+      setStepError(err);
+      dispatch(addToast({ type: 'error', message: err }));
+      return;
+    }
+    setStepError('');
     await saveProgress();
-    if (currentStep < 9) dispatch(setCurrentStep(currentStep + 1))
+    const nextStep = currentStep + 1;
+    dispatch(setCurrentStep(nextStep));
+    setMaxReachedStep((prev) => Math.max(prev, nextStep));
   };
 
   const prev = () => {
+    setStepError('');
     if (currentStep > 1) dispatch(setCurrentStep(currentStep - 1));
+  };
+
+  const goToStep = (stepId) => {
+    if (stepId <= maxReachedStep) {
+      setStepError('');
+      dispatch(setCurrentStep(stepId));
+    }
+  };
+
+  const handleSave = async () => {
+    await saveProgress();
+    dispatch(addToast({ type: 'success', message: 'Progress saved!' }));
   };
 
   const handleSubmit = async () => {
@@ -78,12 +149,16 @@ export default function ApplicationForm() {
       dispatch(addToast({ type: 'error', message: 'Please add at least one college preference.' }));
       return;
     }
+    if (!photoUploaded) {
+      dispatch(addToast({ type: 'error', message: 'Passport size photo upload is required before submitting.' }));
+      return;
+    }
+
     await saveProgress();
     const res = await dispatch(submitApplication(appId));
     if (res.meta.requestStatus === 'fulfilled') {
       const { paymentRequired, orderId, amount } = res.payload.data || {};
       if (paymentRequired) {
-        // Trigger CCAvenue payment
         dispatch(addToast({ type: 'info', message: 'Redirecting to payment gateway...' }));
         initiatePayment(appId, orderId, amount);
       } else {
@@ -91,7 +166,7 @@ export default function ApplicationForm() {
         navigate('/student/status');
       }
     } else {
-      dispatch(addToast({ type: 'error', message: res.payload || 'Submission failed' }));
+      dispatch(addToast({ type: 'error', message: res.payload || 'Submission failed. Please check all required fields.' }));
     }
   };
 
@@ -110,12 +185,13 @@ export default function ApplicationForm() {
       });
       document.body.appendChild(form);
       form.submit();
-    } catch (err) {
+    } catch {
       dispatch(addToast({ type: 'error', message: 'Payment initiation failed' }));
     }
   };
 
   const StepComponent = STEPS[currentStep - 1]?.component;
+  const canSubmit = declaration && photoUploaded && !loading;
 
   return (
     <AppLayout>
@@ -123,42 +199,63 @@ export default function ApplicationForm() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Application Form</h1>
-            {current?.application_no && <p className="text-sm text-gray-500">Application No: {current.application_no}</p>}
+            {current?.application_no && <p className="text-sm text-gray-500">No: {current.application_no}</p>}
           </div>
-          <button onClick={saveProgress} disabled={saving} className="btn-secondary flex items-center gap-2 text-sm">
+          <button onClick={handleSave} disabled={saving} className="btn-secondary flex items-center gap-2 text-sm">
             {saving ? <Spinner size="sm" /> : <Save size={15} />}
             Save Progress
           </button>
         </div>
 
         {/* Stepper */}
-        <div className="flex items-center mb-8 overflow-x-auto pb-2">
+        <div className="flex items-center mb-6 overflow-x-auto pb-2">
           {STEPS.map((step, i) => (
             <div key={step.id} className="flex items-center flex-shrink-0">
               <button
-                onClick={() => dispatch(setCurrentStep(step.id))}
-                className={`flex flex-col items-center gap-1 ${i < STEPS.length - 1 ? 'mr-1' : ''}`}
+                onClick={() => goToStep(step.id)}
+                disabled={step.id > maxReachedStep}
+                className={`flex flex-col items-center gap-1 ${i < STEPS.length - 1 ? 'mr-1' : ''} disabled:cursor-not-allowed`}
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                  currentStep === step.id ? 'bg-primary text-white ring-2 ring-primary ring-offset-2'
-                  : currentStep > step.id ? 'bg-green-500 text-white'
-                  : 'bg-gray-200 text-gray-600'
+                  currentStep === step.id
+                    ? 'bg-primary text-white ring-2 ring-primary ring-offset-2'
+                    : currentStep > step.id || step.id < maxReachedStep
+                    ? 'bg-green-500 text-white'
+                    : step.id <= maxReachedStep
+                    ? 'bg-primary/20 text-primary'
+                    : 'bg-gray-200 text-gray-400'
                 }`}>
-                  {currentStep > step.id ? <CheckCircle size={14} /> : step.id}
+                  {step.id < maxReachedStep || (currentStep > step.id) ? <CheckCircle size={14} /> : step.id}
                 </div>
-                <span className={`text-xs ${currentStep === step.id ? 'text-primary font-medium' : 'text-gray-500'}`}>{step.label}</span>
+                <span className={`text-xs ${currentStep === step.id ? 'text-primary font-medium' : step.id > maxReachedStep ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {step.label}
+                </span>
               </button>
-              {i < STEPS.length - 1 && <div className={`h-0.5 w-6 sm:w-10 mx-1 mt-[-12px] ${currentStep > step.id ? 'bg-green-500' : 'bg-gray-200'}`} />}
+              {i < STEPS.length - 1 && (
+                <div className={`h-0.5 w-6 sm:w-8 mx-1 mt-[-12px] ${step.id < maxReachedStep ? 'bg-green-500' : 'bg-gray-200'}`} />
+              )}
             </div>
           ))}
         </div>
+
+        {/* Step error banner */}
+        {stepError && (
+          <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+            <AlertCircle size={16} className="flex-shrink-0" />
+            {stepError}
+          </div>
+        )}
 
         {/* Step content */}
         <div className="card min-h-64">
           {loading && !current ? (
             <Spinner size="lg" className="py-20" />
           ) : currentStep === 9 ? (
-            <PreviewSubmit onDeclarationChange={setDeclaration} declarationChecked={declaration} />
+            <PreviewSubmit
+              onDeclarationChange={setDeclaration}
+              declarationChecked={declaration}
+              onPhotoUploaded={setPhotoUploaded}
+            />
           ) : StepComponent ? (
             <StepComponent />
           ) : null}
@@ -171,12 +268,17 @@ export default function ApplicationForm() {
           </button>
           <span className="text-sm text-gray-500">Step {currentStep} of {STEPS.length}</span>
           {currentStep < 9 ? (
-            <button onClick={next} disabled={saving} className="btn-primary flex items-center gap-2">
+            <button onClick={next} disabled={saving} className="btn-primary flex items-center gap-2 disabled:opacity-60">
               {saving ? <Spinner size="sm" /> : null}
               Save & Next <ChevronRight size={16} />
             </button>
           ) : (
-            <button onClick={handleSubmit} disabled={!declaration || loading} className="btn-primary flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50">
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              title={!declaration ? 'Accept declaration first' : !photoUploaded ? 'Upload passport photo first' : ''}
+              className="btn-primary flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               {loading ? <Spinner size="sm" /> : <CheckCircle size={16} />}
               Submit Application
             </button>

@@ -3,7 +3,7 @@ const sequelize = require('../config/db');
 
 const College = sequelize.define('College', {
   college_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-  college_code: { type: DataTypes.STRING(20), allowNull: false, unique: true },
+  college_code: { type: DataTypes.STRING(20), allowNull: false },
   college_name: { type: DataTypes.STRING(255), allowNull: false },
   address: { type: DataTypes.TEXT },
   district_id: { type: DataTypes.INTEGER },
