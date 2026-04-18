@@ -46,8 +46,19 @@ export default function PersonalDetails() {
           </select>
         </div>
         <div>
-          <label className="form-label">Aadhaar Number</label>
-          <input className="form-input" maxLength={12} value={form.aadhaar} onChange={(e) => update('aadhaar', e.target.value)} placeholder="12-digit Aadhaar" />
+          <label className="form-label">Aadhaar Number *</label>
+          <input
+            className={`form-input ${form.aadhaar && !/^\d{12}$/.test(form.aadhaar) ? 'border-red-400' : ''}`}
+            maxLength={12}
+            inputMode="numeric"
+            pattern="\d{12}"
+            value={form.aadhaar}
+            onChange={(e) => update('aadhaar', e.target.value.replace(/\D/g, ''))}
+            placeholder="12-digit Aadhaar number"
+          />
+          {form.aadhaar && !/^\d{12}$/.test(form.aadhaar) && (
+            <p className="text-xs text-red-500 mt-1">Must be exactly 12 digits</p>
+          )}
         </div>
         <div>
           <label className="form-label">Religion</label>

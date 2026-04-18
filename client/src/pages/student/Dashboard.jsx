@@ -15,6 +15,8 @@ export default function StudentDashboard() {
 
   useEffect(() => { dispatch(fetchMyApplications()); }, [dispatch]);
 
+  const hasSubmitted = list.some((app) => ['SUBMITTED', 'PAID', 'VERIFIED', 'ALLOCATED', 'REJECTED'].includes(app.status));
+
   const downloadPDF = async (appId) => {
     try {
       const res = await api.get(`/applications/${appId}/pdf`, { responseType: 'blob' });
@@ -46,9 +48,15 @@ export default function StudentDashboard() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-gray-800">My Applications</h2>
-              <Link to="/student/apply" className="btn-primary flex items-center gap-2 text-sm">
-                <Plus size={15} /> New Application
-              </Link>
+              {hasSubmitted ? (
+                <span className="text-sm text-amber-600 font-medium px-3 py-1 bg-amber-50 rounded-full">
+                  You have already applied
+                </span>
+              ) : (
+                <Link to="/student/apply" className="btn-primary flex items-center gap-2 text-sm">
+                  <Plus size={15} /> New Application
+                </Link>
+              )}
             </div>
             {list.map((app) => (
               <div key={app.application_id} className="card hover:shadow-md transition-shadow">

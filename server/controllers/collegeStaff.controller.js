@@ -29,11 +29,17 @@ async function getCollegeApplications(req, res) {
 
     const activeYear = await AcademicYear.findOne({ where: { is_active: 1 } });
 
+    // Handle empty appIds array gracefully
     const appIds = await ApplicationCollege.findAll({
       where: { college_id: collegeId },
       attributes: ['application_id'],
       raw: true,
     }).then(rows => rows.map(r => r.application_id));
+
+    // If no applications for this college, return empty result
+    if (appIds.length === 0) {
+      return paginated(res, [], 0, page, limit);
+    }
 
     const appWhere = { application_id: { [Op.in]: appIds } };
     if (activeYear) appWhere.year_id = activeYear.year_id;
@@ -68,8 +74,8 @@ async function getCollegeApplications(req, res) {
 
     return paginated(res, rows, count, page, limit);
   } catch (err) {
-    console.error(err);
-    return error(res, 'Failed to fetch applications', 500);
+    console.error('College applications error:', err);
+    return error(res, err.message || 'Failed to fetch applications', 500);
   }
 }
 

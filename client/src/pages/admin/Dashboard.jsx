@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import AppLayout from '../../components/layout/AppLayout';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { FileText, Clock, CheckCircle, Award } from 'lucide-react';
@@ -85,14 +86,15 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick links */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           {[
-            { label: 'Manage Colleges', href: '/admin/colleges', color: 'bg-blue-600' },
-            { label: 'Manage Users', href: '/admin/users', color: 'bg-green-600' },
-            { label: 'Master Data', href: '/admin/master-data', color: 'bg-amber-600' },
-            { label: 'Reports', href: '/admin/reports', color: 'bg-purple-600' },
-          ].map(({ label, href, color }) => (
-            <a key={href} href={href} className={`${color} text-white rounded-lg p-4 text-center text-sm font-medium hover:opacity-90 transition-opacity`}>{label}</a>
+            { label: 'Applications', to: '/admin/applications', color: 'bg-indigo-600' },
+            { label: 'Manage Colleges', to: '/admin/colleges', color: 'bg-blue-600' },
+            { label: 'Manage Users', to: '/admin/users', color: 'bg-green-600' },
+            { label: 'Master Data', to: '/admin/master-data', color: 'bg-amber-600' },
+            { label: 'Reports', to: '/admin/reports', color: 'bg-purple-600' },
+          ].map(({ label, to, color }) => (
+            <Link key={to} to={to} className={`${color} text-white rounded-lg p-4 text-center text-sm font-medium hover:opacity-90 transition-opacity`}>{label}</Link>
           ))}
         </div>
       </div>

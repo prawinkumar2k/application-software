@@ -238,7 +238,7 @@ function SSLCSection({ data, onChange }) {
         subjects={data.subjects || SSLC_SUBJECTS_INITIAL}
         onMarkChange={(idx, val) => {
           const updated = [...(data.subjects || SSLC_SUBJECTS_INITIAL)];
-          updated[idx].marks = val;
+          updated[idx] = { ...updated[idx], marks: val };
           onChange('sslc', { ...data, subjects: updated });
         }}
         title="SSLC Marks"
@@ -337,7 +337,7 @@ function HSCSection({ data, onChange }) {
             subjects={data.subjects || hscSubjects}
             onMarkChange={(idx, val) => {
               const updated = [...(data.subjects || hscSubjects)];
-              updated[idx].marks = val;
+              updated[idx] = { ...updated[idx], marks: val };
               onChange('hsc', { ...data, subjects: updated });
             }}
             title="HSC Marks (For Cutoff Calculation)"
@@ -412,7 +412,7 @@ function ITISection({ data, onChange }) {
         subjects={data.subjects || ITI_SUBJECTS_INITIAL}
         onMarkChange={(idx, val) => {
           const updated = [...(data.subjects || ITI_SUBJECTS_INITIAL)];
-          updated[idx].marks = val;
+          updated[idx] = { ...updated[idx], marks: val };
           onChange('iti', { ...data, subjects: updated });
         }}
         title="ITI Marks"
@@ -474,7 +474,7 @@ function VocationalSection({ data, onChange }) {
         subjects={data.subjects || VOCATIONAL_SUBJECTS_INITIAL}
         onMarkChange={(idx, val) => {
           const updated = [...(data.subjects || VOCATIONAL_SUBJECTS_INITIAL)];
-          updated[idx].marks = val;
+          updated[idx] = { ...updated[idx], marks: val };
           onChange('vocational', { ...data, subjects: updated });
         }}
         title="Vocational Marks"

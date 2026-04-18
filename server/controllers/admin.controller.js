@@ -7,6 +7,11 @@ const {
 } = require('../models');
 const { success, error, paginated } = require('../utils/apiResponse');
 
+const STUDENT_MINI_INCLUDE = [
+  { model: Community, as: 'community', attributes: ['community_name'] },
+  { model: District, as: 'commDistrict', attributes: ['district_name'] },
+];
+
 // Dashboard stats
 async function getDashboardStats(req, res) {
   try {
@@ -235,11 +240,6 @@ async function getApplicationReport(req, res) {
   }
 }
 
-const STUDENT_MINI_INCLUDE = [
-  { model: Community, as: 'community', attributes: ['community_name'] },
-  { model: District, as: 'commDistrict', attributes: ['district_name'] },
-];
-
 async function getPaymentReport(req, res) {
   try {
     const { start_date, end_date, status, page = 1, limit = 50 } = req.query;
@@ -260,11 +260,194 @@ async function getPaymentReport(req, res) {
   }
 }
 
+// CSV helpers
+function escapeCSV(v) {
+  if (v == null) return '';
+  const s = String(v);
+  return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function toCSV(headers, rows) {
+  const lines = [headers.join(',')];
+  for (const row of rows) lines.push(row.map(escapeCSV).join(','));
+  return lines.join('\r\n');
+}
+
+function validateDateRange(start_date, end_date, res) {
+  if ((start_date && !end_date) || (!start_date && end_date)) {
+    res.status(400).json({ message: 'Both start_date and end_date are required' });
+    return false;
+  }
+  if (start_date && end_date) {
+    const s = new Date(start_date), e = new Date(end_date);
+    if (isNaN(s) || isNaN(e)) { res.status(400).json({ message: 'Invalid date format' }); return false; }
+    if (s > e) { res.status(400).json({ message: 'start_date must be before end_date' }); return false; }
+  }
+  return true;
+}
+
+async function downloadApplicationReport(req, res) {
+  try {
+    const { start_date, end_date, district_id, gender, community_id, status } = req.query;
+    if (!validateDateRange(start_date, end_date, res)) return;
+
+    const activeYear = await AcademicYear.findOne({ where: { is_active: 1 } });
+    const appWhere = {};
+    if (activeYear) appWhere.year_id = activeYear.year_id;
+    if (status) appWhere.status = status;
+    if (start_date && end_date) {
+      const end = new Date(end_date);
+      end.setHours(23, 59, 59, 999);
+      appWhere.created_at = { [Op.between]: [new Date(start_date), end] };
+    }
+
+    const studentWhere = {};
+    if (gender) studentWhere.gender = gender;
+    if (community_id) studentWhere.community_id = community_id;
+    if (district_id) studentWhere.comm_district_id = district_id;
+
+    const rows = await Application.findAll({
+      where: appWhere,
+      include: [
+        { model: Student, as: 'student', where: studentWhere, required: true, include: STUDENT_MINI_INCLUDE },
+        { model: AcademicYear, as: 'academicYear', attributes: ['year_label'] },
+        { model: Payment, as: 'payments', attributes: ['status', 'amount'], required: false },
+      ],
+      order: [['created_at', 'DESC']],
+    });
+
+    if (rows.length === 0) return res.status(404).json({ message: 'No data found for the selected filters' });
+
+    const headers = ['Application No', 'Student Name', 'Gender', 'Community', 'District', 'Admission Type', 'Status', 'Academic Year', 'Payment Status', 'Date'];
+    const csvRows = rows.map((app) => [
+      app.application_no,
+      app.student?.name,
+      app.student?.gender,
+      app.student?.community?.community_name,
+      app.student?.commDistrict?.district_name,
+      app.student?.admission_type,
+      app.status,
+      app.academicYear?.year_label,
+      app.payments?.[0]?.status || '-',
+      new Date(app.created_at).toLocaleDateString('en-IN'),
+    ]);
+
+    const filename = `applications_report_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(toCSV(headers, csvRows));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Failed to generate report' });
+  }
+}
+
+async function downloadPaymentReport(req, res) {
+  try {
+    const { start_date, end_date, status } = req.query;
+    if (!validateDateRange(start_date, end_date, res)) return;
+
+    const where = {};
+    if (status) where.status = status;
+    if (start_date && end_date) {
+      const end = new Date(end_date);
+      end.setHours(23, 59, 59, 999);
+      where.created_at = { [Op.between]: [new Date(start_date), end] };
+    }
+
+    const rows = await Payment.findAll({
+      where,
+      include: [{ model: Application, as: 'application', attributes: ['application_no', 'status'] }],
+      order: [['created_at', 'DESC']],
+    });
+
+    if (rows.length === 0) return res.status(404).json({ message: 'No data found for the selected filters' });
+
+    const headers = ['Order ID', 'Application No', 'Amount (Rs)', 'Payment Status', 'Bank Ref No', 'Payment Mode', 'Date'];
+    const csvRows = rows.map((p) => [
+      p.order_id,
+      p.application?.application_no,
+      p.amount,
+      p.status,
+      p.bank_ref_no || '-',
+      p.payment_mode || '-',
+      new Date(p.created_at).toLocaleDateString('en-IN'),
+    ]);
+
+    const filename = `payments_report_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(toCSV(headers, csvRows));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Failed to generate report' });
+  }
+}
+
+// Applications management
+async function getApplications(req, res) {
+  try {
+    const { page = 1, limit = 20, status, search, gender, district_id } = req.query;
+    const activeYear = await AcademicYear.findOne({ where: { is_active: 1 } });
+
+    const appWhere = {};
+    if (activeYear) appWhere.year_id = activeYear.year_id;
+    if (status) appWhere.status = status;
+
+    const studentWhere = {};
+    if (gender) studentWhere.gender = gender;
+    if (district_id) studentWhere.comm_district_id = district_id;
+    if (search) {
+      studentWhere[Op.or] = [
+        { name: { [Op.like]: `%${search}%` } },
+        { mobile: { [Op.like]: `%${search}%` } },
+      ];
+    }
+
+    const hasStudentFilter = Object.keys(studentWhere).length > 0;
+    const count = await Application.count({
+      where: appWhere,
+      include: [{ model: Student, as: 'student', where: studentWhere, required: hasStudentFilter }],
+    });
+    const rows = await Application.findAll({
+      where: appWhere,
+      include: [
+        { model: Student, as: 'student', where: studentWhere, required: hasStudentFilter, include: STUDENT_MINI_INCLUDE },
+        { model: AcademicYear, as: 'academicYear', attributes: ['year_label'] },
+        { model: Payment, as: 'payments', attributes: ['status', 'amount'], required: false },
+      ],
+      order: [['created_at', 'DESC']],
+      offset: (page - 1) * limit,
+      limit: parseInt(limit),
+    });
+    return paginated(res, rows, count, page, limit);
+  } catch (err) {
+    console.error(err);
+    return error(res, 'Failed to fetch applications', 500);
+  }
+}
+
+async function updateApplicationStatus(req, res) {
+  try {
+    const app = await Application.findByPk(req.params.id);
+    if (!app) return error(res, 'Application not found', 404);
+    const { status } = req.body;
+    const allowed = ['VERIFIED', 'ALLOCATED', 'REJECTED'];
+    if (!allowed.includes(status)) return error(res, `Status must be one of: ${allowed.join(', ')}`, 400);
+    await app.update({ status });
+    return success(res, null, `Status updated to ${status}`);
+  } catch (err) {
+    return error(res, 'Failed to update application status', 500);
+  }
+}
+
 module.exports = {
   getDashboardStats, getUsers, createUser, updateUser, toggleUserStatus,
   getDistricts, createDistrict, updateDistrict,
   getCommunities, createCommunity, createCaste,
   getAcademicYears, createAcademicYear, updateAcademicYear,
   getFeeStructures, upsertFeeStructure,
+  getApplications, updateApplicationStatus,
   getApplicationReport, getPaymentReport,
+  downloadApplicationReport, downloadPaymentReport,
 };

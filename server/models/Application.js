@@ -6,6 +6,7 @@ const Application = sequelize.define('Application', {
   student_id: { type: DataTypes.INTEGER, allowNull: false },
   year_id: { type: DataTypes.INTEGER, allowNull: false },
   application_no: { type: DataTypes.STRING(30), unique: true },
+  aadhaar_number: { type: DataTypes.STRING(12), allowNull: true, unique: true },
   status: {
     type: DataTypes.ENUM('DRAFT','SUBMITTED','PAID','VERIFIED','ALLOCATED','REJECTED'),
     defaultValue: 'DRAFT'

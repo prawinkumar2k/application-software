@@ -1,6 +1,8 @@
 const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
 
-function buildApplicationHTML(app) {
+function buildApplicationHTML(app, photoDataUri = null) {
   const s = app.student || {};
   const marks = app.marks || [];
   const prefs = app.collegePreferences || [];
@@ -9,6 +11,10 @@ function buildApplicationHTML(app) {
   const maxTotal = marks.reduce((sum, m) => sum + parseFloat(m.max_marks || 100), 0);
   const percentage = maxTotal > 0 ? ((totalMarks / maxTotal) * 100).toFixed(2) : '0.00';
 
+  const photoBlock = photoDataUri
+    ? `<img src="${photoDataUri}" style="width:90px;height:110px;object-fit:cover;border:2px solid #1e3a5f;" alt="Photo" />`
+    : `<div style="width:90px;height:110px;border:2px dashed #aaa;display:flex;align-items:center;justify-content:center;font-size:9px;color:#aaa;text-align:center;line-height:1.5;">PASTE<br/>PHOTO<br/>HERE</div>`;
+
   return `
 <!DOCTYPE html>
 <html>
@@ -16,22 +22,28 @@ function buildApplicationHTML(app) {
 <meta charset="UTF-8"/>
 <style>
   body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; color: #222; }
-  h1 { text-align: center; color: #1e3a5f; font-size: 16px; margin-bottom: 4px; }
-  h2 { text-align: center; color: #444; font-size: 13px; margin: 0 0 16px; }
   .section { margin-bottom: 16px; }
   .section-title { background: #1e3a5f; color: white; padding: 4px 8px; font-weight: bold; font-size: 12px; margin-bottom: 6px; }
   table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
   td, th { border: 1px solid #ccc; padding: 4px 8px; }
   th { background: #f0f0f0; font-weight: bold; text-align: left; }
   .label { font-weight: bold; width: 35%; background: #f8f8f8; }
-  .app-no { text-align: right; font-size: 11px; color: #555; margin-bottom: 12px; }
   .footer { margin-top: 40px; font-size: 11px; color: #666; }
 </style>
 </head>
 <body>
-  <h1>GOVERNMENT OF TAMIL NADU</h1>
-  <h2>Directorate of Technical Education<br/>Application for Admission to Government Polytechnic Colleges</h2>
-  <div class="app-no">Application No: <strong>${app.application_no || 'DRAFT'}</strong> &nbsp;|&nbsp; Status: <strong>${app.status}</strong></div>
+
+  <!-- Header with photo -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+    <div style="flex:1;text-align:center;">
+      <div style="font-size:16px;font-weight:bold;color:#1e3a5f;margin-bottom:4px;">GOVERNMENT OF TAMIL NADU</div>
+      <div style="font-size:13px;color:#444;margin-bottom:6px;">Directorate of Technical Education<br/>Application for Admission to Government Polytechnic Colleges</div>
+      <div style="text-align:right;font-size:11px;color:#555;">
+        Application No: <strong>${app.application_no || 'DRAFT'}</strong> &nbsp;|&nbsp; Status: <strong>${app.status}</strong>
+      </div>
+    </div>
+    <div style="margin-left:16px;flex-shrink:0;">${photoBlock}</div>
+  </div>
 
   <div class="section">
     <div class="section-title">Personal Details</div>
@@ -117,11 +129,31 @@ function buildApplicationHTML(app) {
 }
 
 async function generateApplicationPDF(applicationData) {
-  const html = buildApplicationHTML(applicationData);
+  let photoDataUri = null;
+  const photoDoc = (applicationData.documents || []).find(d => d.doc_type === 'photo');
+  if (photoDoc?.file_path) {
+    try {
+      const absPath = path.isAbsolute(photoDoc.file_path)
+        ? photoDoc.file_path
+        : path.join(__dirname, '..', photoDoc.file_path);
+      if (fs.existsSync(absPath)) {
+        const ext = path.extname(absPath).toLowerCase();
+        const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+        const data = fs.readFileSync(absPath);
+        photoDataUri = `data:${mimeType};base64,${data.toString('base64')}`;
+      }
+    } catch (_) {}
+  }
+
+  const html = buildApplicationHTML(applicationData, photoDataUri);
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: 'networkidle0' });
-  const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '15mm', bottom: '15mm', left: '15mm', right: '15mm' } });
+  const pdfBuffer = await page.pdf({
+    format: 'A4',
+    printBackground: true,
+    margin: { top: '15mm', bottom: '15mm', left: '15mm', right: '15mm' },
+  });
   await browser.close();
   return pdfBuffer;
 }
